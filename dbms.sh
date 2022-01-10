@@ -3,7 +3,38 @@
 echo "Choose the number for the action you want to take"
 
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
-parentDir=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+
+# -----------------------------------------------
+# Functions specialized in operations on tables (after connecting to a database)
+# -----------------------------------------------
+
+# ----------------
+# Script database menu (controlling tables in databa)
+# ----------------
+function tables_operations_menu {
+	select choice in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Select From Table" "Delete From Table" "Update Table"
+	do
+	case $REPLY in
+		1) create_table $1
+			break;;
+		2) list_tables $1
+			break;;
+		3) drop_table $1
+			break;;
+		4) insert_to_table $1
+			break;;
+		5) select_from_table $1
+			break;;
+		6) delete_from_table $1
+			break;;
+		7) update_table $1
+			break;;
+		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
+			;;
+	esac
+	done
+}
 
 # -----------------------------------------------
 # Functions specialized in operations on database
@@ -14,14 +45,14 @@ function createdb {
 	echo "Type database name:"
 	read database_name
 
-	mkdir $parentDir/database/$database_name
+	mkdir $SCRIPT_PARENT_DIR/database/$database_name
 }
 
 # List all available databases
 function listdb {
 	echo "List of all databases you have:"
 
-	ls $parentDir/database/
+	ls $SCRIPT_PARENT_DIR/database/
 }
 
 # Connect to a database (switch to a directory within the database directory)
@@ -29,8 +60,10 @@ function connectdb {
 	echo "Type database name you would like to connect to:"
 	read database_name
 
-	cd $parentDir/database/$database_name
+	selected_database=$SCRIPT_PARENT_DIR/database/$database_name
+	cd $selected_database
 	echo "You are now connected to $database_name database at $PWD"
+	tables_operations_menu $selected_database
 }
 
 # Drop a database by removing the refering directory
@@ -42,9 +75,9 @@ function dropdb {
 	read consent
 
 	case $consent in
-		y | yes) rm -r $parentDir/database/$database_name
+		y | yes) rm -r $SCRIPT_PARENT_DIR/database/$database_name; echo "Database dropped successfully"
 			;;
-		n | no)
+		n | no) echo "dropping process terminated"
 			;;
 		*) echo "Please enter a valid answer"
 			;;
@@ -52,7 +85,7 @@ function dropdb {
 }
 
 # ----------------
-# Script main menu
+# Script main menu (controlling databases)
 # ----------------
 select choice in "Create Database" "List Databases" "Connect To Databases" "Drop Database"
 do
