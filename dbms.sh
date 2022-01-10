@@ -5,9 +5,9 @@ echo "Choose the number for the action you want to take"
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
 SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 
-# -----------------------------------------------
+# ------------------------------------------------------------------------------
 # Functions specialized in operations on tables (after connecting to a database)
-# -----------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Create a new table in selected database
 function createTable {
@@ -49,14 +49,14 @@ function dropTable {
 				;;
 		esac
 	else
-		echo "No such database"
+		echo "No such table"
 	fi
 
 }
 
-# ----------------
+# ---------------------------------------------------
 # Script database menu (controlling tables in databa)
-# ----------------
+# ---------------------------------------------------
 function tablesOperationsMenu {
 	select choice in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Select From Table" "Delete From Table" "Update Table"
 	do
@@ -116,22 +116,28 @@ function dropdb {
 	echo "Enter database name:"
 	read database_name
 
-	echo "Are you sure you want to drop this database? (y/yes) if you are sure or (n/no) to cancel"
-	read consent
+	database_dir=$SCRIPT_PARENT_DIR/database/$database_name
+	if [ -d  $database_dir ]
+	then
+		echo "Are you sure you want to drop this database? (y/yes) if you are sure or (n/no) to cancel"
+		read consent
 
-	case $consent in
-		y | yes) rm -r $SCRIPT_PARENT_DIR/database/$database_name; echo "Database dropped successfully"
-			;;
-		n | no) echo "dropping process terminated"
-			;;
-		*) echo "Please enter a valid answer"
-			;;
-	esac
+		case $consent in
+			y | Y | yes | Yes | YES) rm -r $database_dir; echo "Database dropped successfully"
+				;;
+			n | N | no | No | NO) echo "dropping process terminated"
+				;;
+			*) echo "Please enter a valid answer"
+				;;
+		esac
+	else
+		echo "No such database"
+	fi
 }
 
-# ----------------
+# ----------------------------------------
 # Script main menu (controlling databases)
-# ----------------
+# ----------------------------------------
 select choice in "Create Database" "List Databases" "Connect To Databases" "Drop Database"
 do
 case $REPLY in
