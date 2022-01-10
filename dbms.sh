@@ -1,5 +1,26 @@
 #!/bin/bash
 
+# --------------------------------------
+# General working instructions (mutable)
+# --------------------------------------
+#
+# NAMING 
+# ------
+# Global vriables are typed in all-cabs in snake_case style, ex: $SCRIPT_PARENT_DIR
+# local vriables are typed in all-lowercase in snake_case style, ex: $table_name
+# Function names are types in camelCase style, ex: createTable
+# 
+# PROJECT FILE STRUCTURE
+# ----------------------
+# 1. First, global variable are declared on the beginning of the file
+# 2. Then, comes table operations section (createTable, listTables, dropTable,..)
+#	a. Starting with operatoins functions. (Done: createTable, listTables, dropTable)
+#	b. At the end of the section comes tablesOperationsMenu function, which is responsible for displaying available operations on a table for a user (triggered on connecting to database)
+# 3. At last, comes database operations section (createdb, listbd, connectdb, dropdb)
+#	a. Starting with operatoins functions. (Done(all): createdb, listbd, connectdb, dropdb)
+#	b. At the end of the section comes mainMenu function, which is responsible for displaying available operations on a database for a user (triggered on initializing the script)
+
+
 echo "Choose the number for the action you want to take"
 
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
