@@ -21,8 +21,6 @@
 #	b. At the end of the section comes mainMenu function, which is responsible for displaying available operations on a database for a user (triggered on initializing the script)
 
 
-echo "Choose the number for the action you want to take"
-
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
 SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 
@@ -160,6 +158,8 @@ function dropdb {
 # Script main menu (controlling databases)
 # ----------------------------------------
 function mainMenu {
+	echo "Choose the number for the action you want to take"
+
 	select choice in "Create Database" "List Databases" "Connect To Databases" "Drop Database"
 	do
 	case $REPLY in
