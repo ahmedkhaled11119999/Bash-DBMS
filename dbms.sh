@@ -28,11 +28,13 @@ SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 # Helper Functions
 # ------------------------------------------------------------------------------
 
-#Takes 2 parameters : $1 -> the column value we want to check for its type , $2 -> the real data type of the column in the the table.
+#Takes 2 parameters :
+# $1 -> the column value we want to check for its type , $2 -> the column number which we will save the value , $3 -> table file path
 #returns true if the value is num or string and matches its column type and returns false in any other case. 
 function checkTypeValidity {
+	supposed_type=`sed -n 2p $3 | cut -d: -f$2`
 	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
-	if [[ $1 =~ $num_regexp && $2 == num ]] || [[ ! $1 =~ $num_regexp && $2 == string ]]; then
+	if [[ $1 =~ $num_regexp && $supposed_type == num ]] || [[ ! $1 =~ $num_regexp && $supposed_type == string ]]; then
 	echo true
 	else
 	echo false
@@ -120,17 +122,17 @@ function insertToTable {
 	read record
 	IFS=':' read -a splitted_record <<< "$record"
 	for ((j=0; j<${#splitted_record[@]}; j++)) do
-	cut_command_index=$((j+1))
-	supposed_type=`sed -n 2p $table_file | cut -d: -f$cut_command_index`
-	if [[ $( checkTypeValidity ${splitted_record[j]} $supposed_type ) == true ]]; then
+	column_index=$((j+1))
+	if [[ $( checkTypeValidity ${splitted_record[j]} $column_index $table_file ) == true ]]; then
 	if [[ $j -eq  $((${#splitted_record[@]}-1)) ]]; then
+	for (( n=0; n< ${#splitted_record[@]}-1 ; n++)) do
+	echo -n "${splitted_record[n]}:" >> $table_file
+	done
 	echo "${splitted_record[j]}" >> $table_file
 	break 2
-	else
-	echo -n "${splitted_record[j]}:" >> $table_file
 	fi
 	else
-	echo "You entry data type at `sed -n 1p $table_file | cut -d: -f$cut_command_index` column doesn't match the column data type, please re-enter this record correctly"
+	echo "You entry data type at `sed -n 1p $table_file | cut -d: -f$column_index` column doesn't match the column data type, please re-enter this record correctly"
 	break
 	fi
   done
