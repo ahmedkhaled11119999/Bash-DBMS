@@ -34,12 +34,17 @@ function createTable {
 	echo "Type table name:"
 	read table_name
 	table_file=$1/$table_name
+	if [ -f $table_file ]; then
+	printf 'This table already exists, if you wish to insert into it choose option 4\n'
+	else
 	touch $table_file
-
 	# To create table head
-	echo "Enter your columns sparated by ':', ex => col1:col2:col3"
-	read table_head
-	echo $table_head > $table_file
+	printf 'Enter your columns seperated by ':', ex => col1:col2:col3, then enter your columns data type in the same form.\navailable data types: num , string\n\n'
+	read table_columns
+	echo $table_columns > $table_file
+	read table_types
+	echo $table_types >> $table_file
+	fi
 }
 
 # List all available tables in selected databases
@@ -71,6 +76,55 @@ function dropTable {
 		echo "No such table"
 	fi
 
+}
+
+#inserting into a certain table
+function insertToTable {
+	printf "Enter table name:"
+	read table_name
+	table_file=$1/$table_name
+	if [ -f  $table_file ]; then
+	printf 'Enter the number of the record you wish to enter:'
+	records_num_regex='^[0-9]+$'
+	while true 
+	do
+	read records_num
+	if ! [[ $records_num =~ $records_num_regex ]]; then
+	printf 'Please enter a valid number:'
+	else
+	break;
+	fi
+	done
+	printf 'Enter your columns seperated by ":", ex => col1:col2:col3\n\n'
+	printf "this is your columns names: `sed -n 1p $table_file` \n\n"
+	printf "this is your columns datatypes: `sed -n 2p $table_file` \n\n"
+	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
+	for ((i=1;i<=$records_num;i++)) do
+	while true
+	do
+	printf "\nRecord number $i : \n"
+	read record
+	IFS=':' read -a splitted_record <<< "$record"
+	for ((j=0; j<${#splitted_record[@]}; j++)) do
+	cut_command_index=$((j+1))
+	supposed_type=`sed -n 2p $table_file | cut -d: -f$cut_command_index`
+	if [[ ${splitted_record[j]} =~ $num_regexp && $supposed_type == num ]] || [[ ! ${splitted_record[j]} =~ $num_regexp && $supposed_type == string ]]; then
+	if [[ $j -eq  $((${#splitted_record[@]}-1)) ]]; then
+	echo "${splitted_record[j]}" >> $table_file
+	break 2
+	else
+	echo -n "${splitted_record[j]}:" >> $table_file
+	fi
+	else
+	echo "You entry data type at `sed -n 1p $table_file | cut -d: -f$cut_command_index` column doesn't match the column data type, please re-enter this record correctly"
+	break
+	fi
+  done
+	done
+	done
+	else
+	printf "$table_name doesn't exist. if you wish to create it choose option 1"
+	fi
 }
 
 # ---------------------------------------------------
@@ -108,26 +162,35 @@ function tablesOperationsMenu {
 function createdb {
 	echo "Type database name:"
 	read database_name
-
+	if [ -d $SCRIPT_PARENT_DIR/database ]; then
 	mkdir $SCRIPT_PARENT_DIR/database/$database_name
+	else
+	mkdir $SCRIPT_PARENT_DIR/database
+	mkdir $SCRIPT_PARENT_DIR/database/$database_name
+	fi
 }
-
 # List all available databases
 function listdb {
+	if [ -d $SCRIPT_PARENT_DIR/database ]; then
 	echo "List of all databases you have:"
-
 	ls $SCRIPT_PARENT_DIR/database/
+	else
+	echo "You have never created a database, please choose option 1 to create one"
+	fi
 }
 
 # Connect to a database (switch to a directory within the database directory)
 function connectdb {
 	echo "Type database name you would like to connect to:"
 	read database_name
-
 	selected_database=$SCRIPT_PARENT_DIR/database/$database_name
+	if [ -d $selected_database ]; then
 	cd $selected_database
 	echo "You are now connected to $database_name database at $PWD"
 	tablesOperationsMenu $selected_database
+	else
+	echo "There is no such database called $database_name to connect to it"
+	fi
 }
 
 # Drop a database by removing the refering directory
