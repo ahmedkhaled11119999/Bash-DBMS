@@ -25,6 +25,21 @@
 SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 
 # ------------------------------------------------------------------------------
+# Helper Functions
+# ------------------------------------------------------------------------------
+
+#Takes 2 parameters : $1 -> the column value we want to check for its type , $2 -> the real data type of the column in the the table.
+#returns true if the value is num or string and matches its column type and returns false in any other case. 
+function checkTypeValidity {
+	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
+	if [[ $1 =~ $num_regexp && $2 == num ]] || [[ ! $1 =~ $num_regexp && $2 == string ]]; then
+	echo true
+	else
+	echo false
+	fi
+}
+
+# ------------------------------------------------------------------------------
 # Functions specialized in operations on tables (after connecting to a database)
 # ------------------------------------------------------------------------------
 
@@ -78,7 +93,7 @@ function dropTable {
 
 }
 
-#inserting into a certain table
+#Inserting into a certain table
 function insertToTable {
 	printf "Enter table name:"
 	read table_name
@@ -98,7 +113,6 @@ function insertToTable {
 	printf 'Enter your columns seperated by ":", ex => col1:col2:col3\n\n'
 	printf "this is your columns names: `sed -n 1p $table_file` \n\n"
 	printf "this is your columns datatypes: `sed -n 2p $table_file` \n\n"
-	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
 	for ((i=1;i<=$records_num;i++)) do
 	while true
 	do
@@ -108,7 +122,7 @@ function insertToTable {
 	for ((j=0; j<${#splitted_record[@]}; j++)) do
 	cut_command_index=$((j+1))
 	supposed_type=`sed -n 2p $table_file | cut -d: -f$cut_command_index`
-	if [[ ${splitted_record[j]} =~ $num_regexp && $supposed_type == num ]] || [[ ! ${splitted_record[j]} =~ $num_regexp && $supposed_type == string ]]; then
+	if [[ $( checkTypeValidity ${splitted_record[j]} $supposed_type ) == true ]]; then
 	if [[ $j -eq  $((${#splitted_record[@]}-1)) ]]; then
 	echo "${splitted_record[j]}" >> $table_file
 	break 2
