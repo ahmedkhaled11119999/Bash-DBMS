@@ -28,10 +28,10 @@ SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 # Helper Functions
 # ------------------------------------------------------------------------------
 
-#Takes 2 parameters :
+#Takes 3 parameters :
 # $1 -> the column value we want to check for its type , $2 -> the column number which we will save the value , $3 -> table file path
 #returns true if the value is num or string and matches its column type and returns false in any other case. 
-function checkTypeValidity {
+function isValueMatchingColumn {
 	supposed_type=`sed -n 2p $3 | cut -d: -f$2`
 	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
 	if [[ $1 =~ $num_regexp && $supposed_type == num ]] || [[ ! $1 =~ $num_regexp && $supposed_type == string ]]; then
@@ -39,6 +39,17 @@ function checkTypeValidity {
 	else
 	echo false
 	fi
+}
+
+#Take 1 parameter :
+# $1 -> the data type to be validated
+# return true if the data type is num or string , returns false in other cases.
+function isTypeValid {
+		if [[ $1 == num ]] || [[ $1 == string ]]; then
+		echo true
+		else
+		echo false
+		fi
 }
 
 # ------------------------------------------------------------------------------
@@ -56,11 +67,28 @@ function createTable {
 	else
 	touch $table_file
 	# To create table head
-	printf 'Enter your columns seperated by ':', ex => col1:col2:col3, then enter your columns data type in the same form.\navailable data types: num , string\n\n'
+	# needs primary key validation
+	printf 'Enter your columns seperated by ':', and the primary key perceded by ^ ex => ^col1:col2:col3,\n'
 	read table_columns
 	echo $table_columns > $table_file
+	while true
+	do
+	printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
 	read table_types
-	echo $table_types >> $table_file
+	IFS=':' read -a splitted_types <<< "$table_types"
+	for ((i=0; i<${#splitted_types[@]}; i++)) do
+	if  [[ $( isTypeValid ${splitted_types[i]} ) == false ]]; then
+	printf "Error,a datatype you entered is not num neither string, please try again with the correct data types.\n"
+	break;
+	else
+	if [[ $(( ${#splitted_types[@]}-1 )) == $i ]]; then
+	echo $table_types >> $table_file;
+	printf "Table $table_name created successfully\n";
+	break 2;
+	fi
+	fi
+	done
+	done
 	fi
 }
 
@@ -123,12 +151,9 @@ function insertToTable {
 	IFS=':' read -a splitted_record <<< "$record"
 	for ((j=0; j<${#splitted_record[@]}; j++)) do
 	column_index=$((j+1))
-	if [[ $( checkTypeValidity ${splitted_record[j]} $column_index $table_file ) == true ]]; then
+	if [[ $( isValueMatchingColumn ${splitted_record[j]} $column_index $table_file ) == true ]]; then
 	if [[ $j -eq  $((${#splitted_record[@]}-1)) ]]; then
-	for (( n=0; n< ${#splitted_record[@]}-1 ; n++)) do
-	echo -n "${splitted_record[n]}:" >> $table_file
-	done
-	echo "${splitted_record[j]}" >> $table_file
+	echo $record >> $table_file ;
 	break 2
 	fi
 	else
