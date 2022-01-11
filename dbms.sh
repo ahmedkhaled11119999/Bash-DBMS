@@ -49,17 +49,25 @@ function createTable {
 	echo "Type table name:"
 	read table_name
 	table_file=$1/$table_name
-	if [ -f $table_file ]; then
-	printf 'This table already exists, if you wish to insert into it choose option 4\n'
+
+	if [ -f $table_file ]
+	then
+		printf 'This table already exists, if you wish to insert into it choose option 4\n'
+		exit 1
+	elif [ -d $1 ]
+	then
+		touch $table_file
 	else
-	touch $table_file
+		mkdir $1
+		touch $table_file
+	fi
+
 	# To create table head
 	printf 'Enter your columns seperated by ':', ex => col1:col2:col3, then enter your columns data type in the same form.\navailable data types: num , string\n\n'
 	read table_columns
 	echo $table_columns > $table_file
 	read table_types
 	echo $table_types >> $table_file
-	fi
 }
 
 # List all available tables in selected databases
@@ -176,13 +184,9 @@ function tablesOperationsMenu {
 function createdb {
 	echo "Type database name:"
 	read database_name
-	if [ -d $SCRIPT_PARENT_DIR/database ]; then
-	mkdir $SCRIPT_PARENT_DIR/database/$database_name
-	else
-	mkdir $SCRIPT_PARENT_DIR/database
-	mkdir $SCRIPT_PARENT_DIR/database/$database_name
-	fi
+	mkdir -p $SCRIPT_PARENT_DIR/database/$database_name
 }
+
 # List all available databases
 function listdb {
 	if [ -d $SCRIPT_PARENT_DIR/database ]; then
