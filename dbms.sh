@@ -80,7 +80,7 @@ function createTable {
 	printf 'Enter your columns seperated by ':', and the primary key perceded by ^ ex => ^col1:col2:col3,\n'
 	read table_columns
 	echo $table_columns > $table_file
-	
+
 	while true
 	do
 		printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
@@ -180,10 +180,17 @@ function insertToTable {
 }
 
 function selectFromTable {
-	echo "What do you want to select?"
-	read selection
-
-	sed -n "/$selection/p" $1
+	echo "Enter a table to select from"
+	read table_name
+	table_file=$1/$table_name
+	if [ -f $table_file ]
+	then
+		echo "What do you want to select?"
+		read selection
+		awk -F -d: $2 $table_file
+	else
+		echo "There is no such table"
+	fi
 }
 
 # ---------------------------------------------------
