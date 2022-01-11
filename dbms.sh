@@ -80,26 +80,27 @@ function createTable {
 	printf 'Enter your columns seperated by ':', and the primary key perceded by ^ ex => ^col1:col2:col3,\n'
 	read table_columns
 	echo $table_columns > $table_file
+	
 	while true
 	do
-	printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
-	read table_types
+		printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
+		read table_types
 
-	IFS=':' read -a splitted_types <<< "$table_types"
-	for ((i=0; i<${#splitted_types[@]}; i++)) do
-	if  [[ $( isTypeValid ${splitted_types[i]} ) == false ]]; then
-	printf "Error,a datatype you entered is not num neither string, please try again with the correct data types.\n"
-	break;
-	else
-	if [[ $(( ${#splitted_types[@]}-1 )) == $i ]]; then
-	echo $table_types >> $table_file;
-	printf "Table $table_name created successfully\n";
-	break 2;
-	fi
-	fi
+		IFS=':' read -a splitted_types <<< "$table_types"
+		for ((i=0; i<${#splitted_types[@]}; i++))
+		do
+			if  [[ $( isTypeValid ${splitted_types[i]} ) == false ]]
+			then
+				printf "Error,a datatype you entered is not num neither string, please try again with the correct data types.\n"
+				break;
+			elif [[ $(( ${#splitted_types[@]}-1 )) == $i ]]
+			then
+				echo $table_types >> $table_file;
+				printf "Table $table_name created successfully\n";
+				break 2;
+			fi
+		done
 	done
-	done
-	fi
 }
 
 # List all available tables in selected databases
@@ -176,6 +177,13 @@ function insertToTable {
 	else
 	printf "$table_name doesn't exist. if you wish to create it choose option 1"
 	fi
+}
+
+function selectFromTable {
+	echo "What do you want to select?"
+	read selection
+
+	sed -n "/$selection/p" $1
 }
 
 # ---------------------------------------------------
