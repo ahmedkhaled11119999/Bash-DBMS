@@ -86,7 +86,7 @@ function createTable {
 		printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
 		read table_types
 
-		IFS=':' read -a splitted_types <<< "$table_types"
+		read -a splitted_types <<< "$table_types"
 		for ((i=0; i<${#splitted_types[@]}; i++))
 		do
 			if  [[ $( isTypeValid ${splitted_types[i]} ) == false ]]
@@ -180,17 +180,43 @@ function insertToTable {
 }
 
 function selectFromTable {
-	echo "Enter a table to select from"
-	read table_name
-	table_file=$1/$table_name
-	if [ -f $table_file ]
-	then
-		echo "What do you want to select?"
-		read selection
-		awk -F -d: $2 $table_file
-	else
-		echo "There is no such table"
-	fi
+	while true
+	do
+		echo "Enter a table to select from"
+		read table_name
+
+		table_file=$1/$table_name
+		if [ -f $table_file ]
+		then
+			echo "What do you want to select?"
+			read selection
+
+			table_head=`sed -n '1p' $table_file`
+			table_data=`sed -n '3,$p' $table_file | sed -n "/$selection/p"`
+
+			# Manage selection (equiv to SELECT clause in sql)
+			if [ "$selection" == "*" ]
+			then
+				# Display full table (equiv to SELECT * clause in sql)
+				echo $table_head
+				echo $table_data
+			else
+				IFS=":" read -a cols <<< "$table_head"
+				selected=0
+				for ((i=0; i<${#cols[@]}; i++))
+				do
+					if [ ${cols[i]} == "$selection" ]
+					then
+						selected=$((i+1))
+					fi
+				done
+				sed  '1,2d' $table_file | cut -d: -f$selected
+			fi
+			break;
+		else
+			echo "There is no such table"
+		fi
+	done
 }
 
 # ---------------------------------------------------
