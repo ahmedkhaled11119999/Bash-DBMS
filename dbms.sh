@@ -202,14 +202,26 @@ function selectFromTable {
 				echo $table_data
 			else
 				IFS=":" read -a cols <<< "$table_head"
-				selected=0
-				for ((i=0; i<${#cols[@]}; i++))
+				IFS=', ' read -r -a selected_cols <<< "$selection"
+				selected=""
+
+				for ((i=0; i<${#selected_cols[@]}; i++))
 				do
-					if [ ${cols[i]} == "$selection" ]
-					then
-						selected=$((i+1))
-					fi
+					for ((j=0; j<${#cols[@]}; j++))
+					do
+						if [ ${cols[j]} == ${selected_cols[i]} ]
+						then
+							col_num=$((j+1));
+							if [[ -n $selected ]]
+							then
+								selected="$selected,$col_num"
+							else
+								selected=$col_num
+							fi
+						fi
+					done
 				done
+				echo $selected
 				sed  '1,2d' $table_file | cut -d: -f$selected
 			fi
 			break;
