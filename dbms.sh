@@ -30,7 +30,7 @@ SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 
 #Takes 3 parameters :
 # $1 -> the column value we want to check for its type , $2 -> the column number which we will save the value , $3 -> table file path
-#returns true if the value is num or string and matches its column type and returns false in any other case. 
+# returns true if the value is num or string and matches its column type and returns false in any other case. 
 function isValueMatchingColumn {
 	supposed_type=`sed -n 2p $3 | cut -d: -f$2`
 	num_regexp="^[+-]?[0-9]+([.][0-9]+)?$"
@@ -41,7 +41,7 @@ function isValueMatchingColumn {
 	fi
 }
 
-#Take 1 parameter :
+#Takes 1 parameter :
 # $1 -> the data type to be validated
 # return true if the data type is num or string , returns false in other cases.
 function isTypeValid {
@@ -50,6 +50,54 @@ function isTypeValid {
 		else
 		echo false
 		fi
+}
+
+#Takes 1 parameter :
+# $1 -> the database row
+# returns the pk column position if exists, 0 in other cases.
+function findPrimaryKey {
+	IFS=':' read -a splitted_inputs <<< "$1";
+	for ((k=0; k<${#splitted_inputs[@]}; k++)) do
+	if echo ${splitted_inputs[k]} | grep -q "^^"; then
+  return $((k+1))
+	else
+  if [[ $(( ${#splitted_inputs[@]}-1 )) == $k ]]; then
+	return 0
+	fi
+	fi
+	done
+}
+
+#Takes 2 parameters :
+# $1 -> line 1 of table file , $2 -> user input
+# returns 1 if the pk column in the user input isn't null, 0 in other cases
+function validateDataPrimaryKey {
+	findPrimaryKey $1
+	line_one_pk_index=$?
+	IFS=':' read -a splitted_inputs <<< "$2";
+	if [[ -z ${splitted_inputs[ $((line_one_pk_index-1)) ]} ]];then
+	return 0
+	else
+	return 1
+	fi
+}
+
+#Takes 1 parameter :
+# $1 -> user row input
+# this function assumes that all the function that is passed to it needs the seperated columns values
+# as its argument
+function validateRowTypes {
+	IFS=':' read -a splitted_inputs <<< "$1";
+	for ((i=0; i<${#splitted_inputs[@]}; i++)) do
+	output=$(isTypeValid ${splitted_inputs[i]})
+	if  [[ $output == false ]]; then
+	return 0
+	else
+	if [[ $(( ${#splitted_inputs[@]}-1 )) == $i ]]; then
+	return 1
+	fi
+	fi
+	done
 }
 
 # ------------------------------------------------------------------------------
@@ -62,45 +110,45 @@ function createTable {
 	echo "Type table name:"
 	read table_name
 	table_file=$1/$table_name
-
-	if [ -f $table_file ]
-	then
-		printf 'This table already exists, if you wish to insert into it choose option 4\n'
-		exit 1
-	elif [ -d $1 ]
-	then
-		touch $table_file
+	if [ -f $table_file ]; then
+	printf 'This table already exists, if you wish to insert into it choose option 4\n'
 	else
-		mkdir $1
-		touch $table_file
-	fi
-
+	touch $table_file
 	# To create table head
-	# needs primary key validation
-	printf 'Enter your columns seperated by ':', and the primary key perceded by ^ ex => ^col1:col2:col3,\n'
-	read table_columns
-	echo $table_columns > $table_file
-
 	while true
 	do
-		printf 'Enter your columns data types in the same format.\navailable data types: num , string\n\n'
-		read table_types
-
-		IFS=':' read -a splitted_types <<< "$table_types"
-		for ((i=0; i<${#splitted_types[@]}; i++))
-		do
-			if  [[ $( isTypeValid ${splitted_types[i]} ) == false ]]
-			then
-				printf "Error,a datatype you entered is not num neither string, please try again with the correct data types.\n"
-				break;
-			elif [[ $(( ${#splitted_types[@]}-1 )) == $i ]]
-			then
-				echo $table_types >> $table_file;
-				printf "Table $table_name created successfully\n";
-				break 2;
-			fi
-		done
+	printf 'Enter your columns seperated by ':', and the primary key perceded by ^ ex => ^col1:col2:col3\n'
+	read table_columns
+	num_of_cols=`awk -F":" '{print NF}' <<< "${table_columns}"`
+	findPrimaryKey $table_columns
+	fpk_return_val=$?
+	if  [[ $fpk_return_val == 0 ]]; then
+	printf "\nError: couldn't find pk. Please try again and add a primary key.\n"
+	else
+	echo $table_columns > $table_file
+	break;
+	fi
 	done
+	while true
+	do
+	printf 'Enter your columns data types in the same format.\navailable data types: num , string\n'
+	read table_types
+	num_of_types=`awk -F":" '{print NF}' <<< "${table_types}"`
+	if [[ $num_of_types != $num_of_cols ]]; then
+	printf "Error: Your datatypes count is '$num_of_types' \nwhich is not equal to your columns count '$num_of_cols' \n"
+	continue
+	fi
+	validateRowTypes $table_types
+	vrt_return_val=$?
+	if  [[ $vrt_return_val == 0 ]]; then
+	printf "Error: a datatype you entered is not num neither string, please try again with the correct data types.\n"
+	else
+	echo $table_types >> $table_file;
+	printf "Table $table_name created successfully\n";
+	break;
+	fi
+	done
+	fi
 }
 
 # List all available tables in selected databases
@@ -151,14 +199,18 @@ function insertToTable {
 	break;
 	fi
 	done
-	printf 'Enter your columns seperated by ":", ex => col1:col2:col3\n\n'
-	printf "this is your columns names: `sed -n 1p $table_file` \n\n"
-	printf "this is your columns datatypes: `sed -n 2p $table_file` \n\n"
+	printf 'Enter your columns seperated by ":", ex => col1:col2:col3\n'
+	printf "this is your columns names: `sed -n 1p $table_file` \n"
+	printf "this is your columns datatypes: `sed -n 2p $table_file` \n"
 	for ((i=1;i<=$records_num;i++)) do
 	while true
 	do
 	printf "\nRecord number $i : \n"
 	read record
+	first_line=`sed -n 1p $table_file`
+	validateDataPrimaryKey $first_line $record
+	is_data_pk_valid=$?
+	if [[ $is_data_pk_valid == 1 ]]; then
 	IFS=':' read -a splitted_record <<< "$record"
 	for ((j=0; j<${#splitted_record[@]}; j++)) do
 	column_index=$((j+1))
@@ -168,28 +220,17 @@ function insertToTable {
 	break 2
 	fi
 	else
-	echo "You entry data type at `sed -n 1p $table_file | cut -d: -f$column_index` column doesn't match the column data type, please re-enter this record correctly"
+	echo "Error: Your entry datatype at `sed -n 1p $table_file | cut -d: -f$column_index` column doesn't match the column data type. please re-enter this record correctly."
 	break
 	fi
   done
+	else
+	printf 'Error: Primary Key cannot be null. \nPlease enter this record again correctly. \n'
+	fi
 	done
 	done
 	else
 	printf "$table_name doesn't exist. if you wish to create it choose option 1"
-	fi
-}
-
-function selectFromTable {
-	echo "Enter a table to select from"
-	read table_name
-	table_file=$1/$table_name
-	if [ -f $table_file ]
-	then
-		echo "What do you want to select?"
-		read selection
-		awk -F -d: $2 $table_file
-	else
-		echo "There is no such table"
 	fi
 }
 
@@ -228,9 +269,13 @@ function tablesOperationsMenu {
 function createdb {
 	echo "Type database name:"
 	read database_name
-	mkdir -p $SCRIPT_PARENT_DIR/database/$database_name
+	if [ -d $SCRIPT_PARENT_DIR/database ]; then
+	mkdir $SCRIPT_PARENT_DIR/database/$database_name
+	else
+	mkdir $SCRIPT_PARENT_DIR/database
+	mkdir $SCRIPT_PARENT_DIR/database/$database_name
+	fi
 }
-
 # List all available databases
 function listdb {
 	if [ -d $SCRIPT_PARENT_DIR/database ]; then
