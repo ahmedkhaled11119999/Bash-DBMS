@@ -424,13 +424,13 @@ function mainMenu {
 	do
 	case $REPLY in
 		1) createdb
-			break;;
+			;;
 		2) listdb
-			break;;
+			;;
 		3) connectdb
-			break;;
+			;;
 		4) dropdb
-			break;;
+			;;
 		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
 			;;
 	esac
