@@ -52,6 +52,14 @@ function isTypeValid {
 		fi
 }
 
+# function whereClause {
+# 	IFS="=" read -a cols <<< "$1"
+# 	col_name=${#cols[1]}
+# 	col_value=${#cols[2]}
+
+# 	echo "${col_name, col_value}"
+# }
+
 # ------------------------------------------------------------------------------
 # Functions specialized in operations on tables (after connecting to a database)
 # ------------------------------------------------------------------------------
@@ -185,11 +193,15 @@ function selectFromTable {
 		echo "Enter a table to select from"
 		read table_name
 
-		table_file=$1/$table_name
+		table_dir=$1
+		table_file=$table_dir/$table_name
 		if [ -f $table_file ]
 		then
 			echo "What do you want to select?"
 			read selection
+
+			# echo "Do you have any conditions for this selection?"
+			# read conditions
 
 			table_head=`sed -n '1p' $table_file`
 			table_data=`sed -n '3,$p' $table_file | sed -n "/$selection/p"`
@@ -205,26 +217,53 @@ function selectFromTable {
 				IFS=', ' read -r -a selected_cols <<< "$selection"
 				selected=""
 
-				for ((i=0; i<${#selected_cols[@]}; i++))
+				declare -i col_exists
+				declare -i keep_decline
+				for ((c=0; c<${#selected_cols[@]}; c++))
 				do
-					for ((j=0; j<${#cols[@]}; j++))
-					do
-						if [ ${cols[j]} == ${selected_cols[i]} ]
+					search_line=`echo $table_head | grep "${selected_cols[c]}"`
+
+					if [[ -n $search_line ]]
+					then
+						# If one of the columns does not exist return 0 anyway
+						if [[ $keep_decline -ne 1 ]]
 						then
-							col_num=$((j+1));
-							if [[ -n $selected ]]
-							then
-								selected="$selected,$col_num"
-							else
-								selected=$col_num
-							fi
+							col_exists=1
 						fi
-					done
+					else
+						col_exists=0
+						keep_decline=1
+					fi
 				done
-				echo $selected
-				sed  '1,2d' $table_file | cut -d: -f$selected
-			fi
+
+				if [[ -n $selection  && -n $col_exists && $col_exists -eq 1 ]]
+				then
+					for ((i=0; i<${#selected_cols[@]}; i++))
+					do
+						for ((j=0; j<${#cols[@]}; j++))
+						do
+							if [ ${cols[j]} == ${selected_cols[i]} ]
+							then
+								col_num=$((j+1));
+								if [[ -n $selected ]]
+								then
+									selected="$selected,$col_num"
+								else
+									selected=$col_num
+								fi
+							fi
+						done
+					done
+					sed  '1,2d' $table_file | cut -d: -f$selected
+					break;
+				else
+					echo "There is no such column"
+					# selectFromTable $table_dir
+				fi
+
+				# whereClause $conditions
 			break;
+			fi
 		else
 			echo "There is no such table"
 		fi
