@@ -53,9 +53,9 @@ function isTypeValid {
 }
 
 # function whereClause {
-# 	IFS="=" read -a cols <<< "$1"
-# 	col_name=${#cols[1]}
-# 	col_value=${#cols[2]}
+# 	IFS="=" read -a condition <<< "$1"
+# 	col_name=${#condition[1]}
+# 	col_value=${#condition[2]}
 
 # 	echo "${col_name, col_value}"
 # }
@@ -251,7 +251,7 @@ function selectFromTable {
 		table_file=$table_dir/$table_name
 		if [ -f $table_file ]
 		then
-			echo "What do you want to select?"
+			echo "What do you want to select? (* For all columns or enter column name)"
 			read selection
 
 			# echo "Do you have any conditions for this selection?"
@@ -264,8 +264,8 @@ function selectFromTable {
 			if [ "$selection" == "*" ]
 			then
 				# Display full table (equiv to SELECT * clause in sql)
-				echo $table_head
-				echo $table_data
+				cat $table_file
+				break;
 			else
 				IFS=":" read -a cols <<< "$table_head"
 				IFS=', ' read -r -a selected_cols <<< "$selection"
@@ -312,11 +312,9 @@ function selectFromTable {
 					break;
 				else
 					echo "There is no such column"
-					# selectFromTable $table_dir
 				fi
 
 				# whereClause $conditions
-			break;
 			fi
 		else
 			echo "There is no such table"
@@ -424,13 +422,13 @@ function mainMenu {
 	do
 	case $REPLY in
 		1) createdb
-			;;
+			break;;
 		2) listdb
-			;;
+			break;;
 		3) connectdb
-			;;
+			break;;
 		4) dropdb
-			;;
+			break;;
 		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
 			;;
 	esac
