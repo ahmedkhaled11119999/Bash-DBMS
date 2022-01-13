@@ -84,8 +84,7 @@ function validateDataPrimaryKey {
 
 #Takes 1 parameter :
 # $1 -> user row input
-# this function assumes that all the function that is passed to it needs the seperated columns values
-# as its argument
+# returns 0 if any column in row violates the type, 1 in other cases.
 function validateRowTypes {
 	IFS=':' read -a splitted_inputs <<< "$1";
 	for ((i=0; i<${#splitted_inputs[@]}; i++)) do
