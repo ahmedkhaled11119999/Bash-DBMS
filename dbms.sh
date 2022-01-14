@@ -54,7 +54,7 @@ function isTypeValid {
 # $1-> column 
 # $2-> row
 function getColumnNumber {
-	col_num=`printf $2 | awk -v RS=':' "/$1/{print NR; exit}"`
+	col_num=`echo $2 | awk -v RS=':' "/$1/{print NR; exit}"`
 	return $col_num
 }
 
@@ -91,7 +91,7 @@ function whereClause {
 	col_value=${cols[1]};
 	getColumnNumber $col_name $first_row
 	col_name_num=$?
-	grep -n "$col_value" $2 | while IFS="" read -r grep_line_output || [ -n "$grep_line_output" ]
+	grep -nw "$col_value" $2 | while IFS="" read -r grep_line_output || [ -n "$grep_line_output" ]
 	do 
 		getColumnNumber $col_value 	`printf '%s\n' "$grep_line_output" | cut -f 2- -d:`
 		col_val_num=$?
@@ -101,23 +101,10 @@ function whereClause {
 				if [[ $1 == -s ]]; then
 				sed -n "$line_to_change p" $2 >> /tmp/select_file
 				elif [[ $1 == -u ]]; then
-				###we need to update awk to work correctly
-				awk -i inplace 'BEGIN { FS = ":" }; FNR == $line_to_change { $`echo $update_index`=$update_value }' $2
-				# sed -i "$line_to_change s/$col_value/$update_value/g" $2; printf "\nRows updated successfully.\n"
+			  awk -i inplace -v column_to_update=$update_index -v column_update_value=$update_value -v line_to_change=$line_to_change 'BEGIN { FS = ":" ; OFS = ":" }; { if (NR == line_to_change) $column_to_update=column_update_value }1' $2
 				else
 				sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
 				fi
-					# case $1 in
-					# -s) 
-					# 	# printf "`sed -n "$line_to_change p" $2`\n from whereClause..."
-					# 	 SELECT_FILE+=$(sed -n "$line_to_change p" $2)
-					# 	;;
-					# -u)
-					# 	sed -i "$line_to_change s/$col_value/updated/g" $2; printf "Rows updated successfully."
-					# 	;;
-					# -d) sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
-					# 	;;
-					# esac
 			done
 		fi
 	done
