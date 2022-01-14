@@ -103,7 +103,7 @@ function whereClause {
 				elif [[ $1 == -u ]]; then
 			  awk -i inplace -v column_to_update=$update_index -v column_update_value=$update_value -v line_to_change=$line_to_change 'BEGIN { FS = ":" ; OFS = ":" }; { if (NR == line_to_change) $column_to_update=column_update_value }1' $2
 				else
-				sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
+					sed -n "$line_to_change p" $2 >> /tmp/to_delete_file
 				fi
 			done
 		fi
@@ -374,6 +374,30 @@ function selectFromTable {
 			echo "There is no such table"
 		fi
 	done
+}
+
+function deleteFromTable {
+	echo "Enter a table to delete from"
+	read table_name
+
+	table_dir=$1
+	table_file=$table_dir/$table_name
+	if [ -f $table_file ]
+	then
+		whereClause -d $table_file
+
+		cat /tmp/to_delete_file | while IFS="" read -r line_to_delete || [ -n "$line_to_delete" ]
+		do
+			echo "$line_to_delete"
+			sed -i "/$line_to_delete/d" $table_file
+			if [[ -f /tmp/to_delete_file ]]
+			then
+				rm /tmp/to_delete_file
+			fi
+		done
+		echo "Done deleting records"
+	fi
+
 }
 
 # ---------------------------------------------------
