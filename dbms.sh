@@ -51,21 +51,46 @@ function isTypeValid {
 		echo false
 		fi
 }
+# $1-> column 
+# $2-> row
+function getColumnNumber {
+	col_num=`printf $2 | awk -v RS=':' "/$1/{print NR; exit}"`
+	return $col_num
+}
 
-#$1-> condition
+#$1-> operation: -s for select , -u for update and -d for delete
 #$2-> table file
 function whereClause {
-	IFS="=" read -a cols <<< "$1";
+	# printf $2
+	printf 'Please enter your condition in this format: column=value\n'
+	read where_condition
+	IFS="=" read -a cols <<< "$where_condition";
 	col_name=${cols[0]};
 	col_value=${cols[1]};
-	grep -n "$col_value" | while IFS="" read -r p || [ -n "$p" ]
+	first_row=`sed -n 1p $2`
+	getColumnNumber $col_name $first_row
+	col_name_num=$?
+	select_file=""
+	grep -n "$col_value" $2 | while IFS="" read -r grep_line_output || [ -n "$grep_line_output" ]
 	do 
-	printf '%s\n' "$p" | cut -f1 -d:
-	done < $2 | while IFS="" read -r p || [ -n "$p" ]
-	do
-	#delete where
-	sed -i "$p d" $2
-  # printf '%s\n' "$p"
+		getColumnNumber $col_value 	`printf '%s\n' "$grep_line_output" | cut -f 2- -d:`
+		col_val_num=$?
+		if [[ $col_val_num == $col_name_num ]]; then
+	   printf '%s\n' "$grep_line_output" | cut -f1 -d: | while IFS="" read -r line_to_change || [ -n "$line_to_change" ]
+				do
+					case $1 in
+					-s) 
+						# printf "`sed -n "$line_to_change p" $2`\n"
+						printf '%s\n' "$p" >> select_file 
+						;;
+					-u)
+						sed -i "$line_to_change s/$col_value/updated/g" $2; printf "Rows updated successfully."
+						break;;
+					-d) sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
+						;;
+					esac
+			done
+		fi
 	done
 }
 
@@ -265,7 +290,7 @@ function selectFromTable {
 
 			# echo "Do you have any conditions for this selection?"
 			# read conditions
-
+			whereClause -s $table_file
 			table_head=`sed -n '1p' $table_file`
 			table_data=`sed -n '3,$p' $table_file | sed -n "/$selection/p"`
 
@@ -317,7 +342,7 @@ function selectFromTable {
 							fi
 						done
 					done
-					sed  '1,2d' $table_file | cut -d: -f$selected
+					sed  '1,2d' $select_file | cut -d: -f$selected
 					break;
 				else
 					echo "There is no such column"
@@ -349,10 +374,11 @@ function tablesOperationsMenu {
 		4) insertToTable $1
 			break;;
 		5) selectFromTable $1
+		# 5) whereClause -s $1/mytable
 			break;;
 		6) deleteFromTable $1
 			break;;
-		7) updateTable $1
+		7) whereClause -u $1/mytable
 			break;;
 		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
 			;;
@@ -433,13 +459,13 @@ function mainMenu {
 	do
 	case $REPLY in
 		1) createdb
-			;;
+			break;;
 		2) listdb
-			;;
+			break;;
 		3) connectdb
-			;;
+			break;;
 		4) dropdb
-			;;
+			break;;
 		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
 			;;
 	esac
