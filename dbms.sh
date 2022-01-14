@@ -52,13 +52,22 @@ function isTypeValid {
 		fi
 }
 
-# function whereClause {
-# 	IFS="=" read -a condition <<< "$1"
-# 	col_name=${#condition[1]}
-# 	col_value=${#condition[2]}
-
-# 	echo "${col_name, col_value}"
-# }
+#$1-> condition
+#$2-> table file
+function whereClause {
+	IFS="=" read -a cols <<< "$1";
+	col_name=${cols[0]};
+	col_value=${cols[1]};
+	grep -n "$col_value" | while IFS="" read -r p || [ -n "$p" ]
+	do 
+	printf '%s\n' "$p" | cut -f1 -d:
+	done < $2 | while IFS="" read -r p || [ -n "$p" ]
+	do
+	#delete where
+	sed -i "$p d" $2
+  # printf '%s\n' "$p"
+	done
+}
 
 #Takes 1 parameter :
 # $1 -> the database row
