@@ -23,7 +23,7 @@
 
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
 SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
-
+SELECT_FILE=""
 # ------------------------------------------------------------------------------
 # Helper Functions
 # ------------------------------------------------------------------------------
@@ -58,19 +58,39 @@ function getColumnNumber {
 	return $col_num
 }
 
+function updateTable {
+		echo "Enter a table to update"
+		read table_name
+		table_dir=$1
+		table_file=$table_dir/$table_name
+		if [ -f $table_file ]
+		then
+		whereClause -u $table_file
+		else
+		echo "there isn't such a table"
+		fi
+}
+
 #$1-> operation: -s for select , -u for update and -d for delete
 #$2-> table file
 function whereClause {
 	# printf $2
+	first_row=`sed -n 1p $2`
 	printf 'Please enter your condition in this format: column=value\n'
 	read where_condition
+	if [[ $1 == -u ]]; then
+	printf "Please enter the column name that you want to update\n"
+	read update_column
+	printf "Please enter the value that you want to update $update_column with. \n"
+	read update_value
+	getColumnNumber $update_column $first_row
+	update_index=$?
+	fi
 	IFS="=" read -a cols <<< "$where_condition";
 	col_name=${cols[0]};
 	col_value=${cols[1]};
-	first_row=`sed -n 1p $2`
 	getColumnNumber $col_name $first_row
 	col_name_num=$?
-	select_file=""
 	grep -n "$col_value" $2 | while IFS="" read -r grep_line_output || [ -n "$grep_line_output" ]
 	do 
 		getColumnNumber $col_value 	`printf '%s\n' "$grep_line_output" | cut -f 2- -d:`
@@ -78,17 +98,26 @@ function whereClause {
 		if [[ $col_val_num == $col_name_num ]]; then
 	   printf '%s\n' "$grep_line_output" | cut -f1 -d: | while IFS="" read -r line_to_change || [ -n "$line_to_change" ]
 				do
-					case $1 in
-					-s) 
-						# printf "`sed -n "$line_to_change p" $2`\n"
-						printf '%s\n' "$p" >> select_file 
-						;;
-					-u)
-						sed -i "$line_to_change s/$col_value/updated/g" $2; printf "Rows updated successfully."
-						break;;
-					-d) sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
-						;;
-					esac
+				if [[ $1 == -s ]]; then
+				sed -n "$line_to_change p" $2 >> /tmp/select_file
+				elif [[ $1 == -u ]]; then
+				###we need to update awk to work correctly
+				awk -i inplace 'BEGIN { FS = ":" }; FNR == $line_to_change { $`echo $update_index`=$update_value }' $2
+				# sed -i "$line_to_change s/$col_value/$update_value/g" $2; printf "\nRows updated successfully.\n"
+				else
+				sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
+				fi
+					# case $1 in
+					# -s) 
+					# 	# printf "`sed -n "$line_to_change p" $2`\n from whereClause..."
+					# 	 SELECT_FILE+=$(sed -n "$line_to_change p" $2)
+					# 	;;
+					# -u)
+					# 	sed -i "$line_to_change s/$col_value/updated/g" $2; printf "Rows updated successfully."
+					# 	;;
+					# -d) sed -i "$line_to_change d" $2; printf "Rows deleted successfully."
+					# 	;;
+					# esac
 			done
 		fi
 	done
@@ -290,6 +319,7 @@ function selectFromTable {
 
 			# echo "Do you have any conditions for this selection?"
 			# read conditions
+			# whereClause -s $table_file
 			whereClause -s $table_file
 			table_head=`sed -n '1p' $table_file`
 			table_data=`sed -n '3,$p' $table_file | sed -n "/$selection/p"`
@@ -298,7 +328,9 @@ function selectFromTable {
 			if [ "$selection" == "*" ]
 			then
 				# Display full table (equiv to SELECT * clause in sql)
-				cat $table_file
+				echo $table_head
+				cat /tmp/select_file
+				rm /tmp/select_file
 				break;
 			else
 				IFS=":" read -a cols <<< "$table_head"
@@ -342,7 +374,8 @@ function selectFromTable {
 							fi
 						done
 					done
-					sed  '1,2d' $select_file | cut -d: -f$selected
+					cat /tmp/select_file | cut -d: -f$selected
+					rm /tmp/select_file
 					break;
 				else
 					echo "There is no such column"
@@ -376,7 +409,7 @@ function tablesOperationsMenu {
 			break;;
 		6) deleteFromTable $1
 			break;;
-		7) whereClause -u $1/mytable
+		7) updateTable $1
 			break;;
 		*) echo "Not a valid option you entered $REPLY, please enter a valid value"
 			;;
