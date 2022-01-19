@@ -23,7 +23,7 @@
 
 # Create global variable of current script directory to facilitate creating files and folders on differen locations
 SCRIPT_PARENT_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
-SELECT_FILE=""
+
 # ------------------------------------------------------------------------------
 # Helper Functions
 # ------------------------------------------------------------------------------
